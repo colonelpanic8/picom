@@ -1454,12 +1454,26 @@ enum script_evaluation_result script_instance_evaluate(struct script_instance *i
 			}
 
 			// Spring physics calculation:
-			// acceleration = (stiffness * displacement - dampening * velocity) / mass
+			// acceleration = (stiffness * displacement - dampening *
+			// velocity) / mass
 			double displacement = target - current;
-			double acceleration =
-			    (i->spring.stiffness * displacement -
-			     i->spring.dampening * velocity) /
-			    i->spring.mass;
+
+			// Settling threshold: when displacement and velocity are both
+			// very small, snap to target to avoid sub-pixel jitter.
+			// Use adaptive threshold: 0.1% of max value for scale animations,
+			// 1.0 pixel for offset animations.
+			double max_val = fmax(fabs(current), fabs(target));
+			double settle_threshold = (max_val < 10.0) ? 0.001 : 1.0;
+			if (fabs(displacement) < settle_threshold &&
+			    fabs(velocity) < settle_threshold) {
+				instance->memory[i->spring.velocity_slot] = 0.0;
+				stack[top++] = target;
+				break;
+			}
+
+			double acceleration = (i->spring.stiffness * displacement -
+			                       i->spring.dampening * velocity) /
+			                      i->spring.mass;
 			velocity += acceleration * delta_t;
 			double new_value = current + velocity * delta_t;
 
@@ -1741,8 +1755,7 @@ TEST_CASE(spring_curve_parsing_errors) {
 
 TEST_CASE(spring_transition_compile) {
 	// Test spring transition compilation
-	static const char *str =
-	    "pos : { \
+	static const char *str = "pos : { \
 		curve = \"spring(200, 25, 1)\"; \
 		start = 100; \
 		end = 0; \
@@ -1788,8 +1801,7 @@ TEST_CASE(spring_transition_compile) {
 
 TEST_CASE(spring_transition_no_clamping) {
 	// Test spring with clamping disabled (allows overshoot)
-	static const char *str =
-	    "pos : { \
+	static const char *str = "pos : { \
 		curve = \"spring(500, 10, 1, false)\"; \
 		start = 100; \
 		end = 0; \
@@ -1829,8 +1841,7 @@ TEST_CASE(spring_transition_no_clamping) {
 
 TEST_CASE(spring_physics_convergence) {
 	// Test that spring eventually converges to target
-	static const char *str =
-	    "pos : { \
+	static const char *str = "pos : { \
 		curve = \"spring(200, 30, 1)\"; \
 		start = 100; \
 		end = 0; \

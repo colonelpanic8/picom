@@ -190,8 +190,8 @@ struct curve parse_cubic_bezier(const char *input_str, const char **out_end, cha
 	return curve_new_cubic_bezier(numbers[0], numbers[1], numbers[2], numbers[3]);
 }
 
-/// Parse spring curve: spring(stiffness, dampening, mass) or spring(stiffness, dampening, mass, clamping)
-/// Default clamping is true (prevents overshoot).
+/// Parse spring curve: spring(stiffness, dampening, mass) or spring(stiffness, dampening,
+/// mass, clamping) Default clamping is true (prevents overshoot).
 struct curve parse_spring(const char *input_str, const char **out_end, char **err) {
 	const char *str = input_str;
 	*err = NULL;
@@ -250,8 +250,9 @@ struct curve parse_spring(const char *input_str, const char **out_end, char **er
 			clamping = false;
 			str += 5;
 		} else {
-			casprintf(err, "Invalid spring clamping value at \"%s\". "
-			               "Expected 'true' or 'false'.",
+			casprintf(err,
+			          "Invalid spring clamping value at \"%s\". "
+			          "Expected 'true' or 'false'.",
 			          str);
 			return CURVE_INVALID_INIT;
 		}
@@ -307,7 +308,8 @@ double curve_sample(const struct curve *curve, double progress) {
 	case CURVE_CUBIC_BEZIER:
 		return curve_sample_cubic_bezier(&curve->bezier, progress);
 	case CURVE_SPRING:
-		// Spring curves are stateful and handled via INST_SPRING, not curve_sample
+		// Spring curves are stateful and handled via INST_SPRING, not
+		// curve_sample
 		unreachable();
 	case CURVE_INVALID:
 	default: unreachable();
